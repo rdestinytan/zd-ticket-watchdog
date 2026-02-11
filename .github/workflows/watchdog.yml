@@ -2,7 +2,7 @@ name: Zendesk Ticket Watchdog
 
 on:
   schedule:
-    - cron: "0 * * * *"  # every hour
+    - cron: "15 23 * * 0-4"  
   workflow_dispatch: {}  # allows manual run from GitHub UI
 
 jobs:
