@@ -1,0 +1,41 @@
+name: Zendesk Ticket Watchdog
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # every hour
+  workflow_dispatch: {}  # allows manual run from GitHub UI
+
+jobs:
+  run-watchdog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run watchdog
+        env:
+          ZENDESK_SUBDOMAIN: ${{ secrets.ZENDESK_SUBDOMAIN }}
+          ZENDESK_EMAIL: ${{ secrets.ZENDESK_EMAIL }}
+          ZENDESK_API_TOKEN: ${{ secrets.ZENDESK_API_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          HOURS_PENDING_THRESHOLD: ${{ secrets.HOURS_PENDING_THRESHOLD }}
+          ALERT_COOLDOWN_HOURS: ${{ secrets.ALERT_COOLDOWN_HOURS }}
+        run: |
+          python watchdog.py
+
+      # Persist dedupe state across runs by committing the state file back to the repo
+      - name: Commit watchdog state
+        run: |
+          if [ -f watchdog_state.json ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add watchdog_state.json
+            git diff --staged --quiet || git commit -m "Update watchdog state"
+            git push
+          fi
